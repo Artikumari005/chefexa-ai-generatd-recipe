@@ -1,4 +1,6 @@
 import './index.css'
+import ReactMarkdown from 'react-markdown'
+
 export default function ClaudeRecipe({ recipe, isLoading }){
     return(
         <section>
@@ -9,7 +11,7 @@ export default function ClaudeRecipe({ recipe, isLoading }){
             <p>Loading recipe...</p>
         ) : (
             <div className="recipe-content">
-                {recipe}
+                <ReactMarkdown>{recipe}</ReactMarkdown>
             </div>
         )}
     </article>

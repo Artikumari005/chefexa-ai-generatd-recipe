@@ -1,33 +1,43 @@
-import Groq from "groq-sdk/index.mjs"
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const SYSTEM_PROMPT = `
-You are an assistant that receives a list of ingredients that a user has and suggests a recipe they could make with some or all of those ingredients. You don't need to use every ingredient they mention in your recipe. The recipe can include additional ingredients they didn't mention, but try not to include too many extra ingredients. Format your response in markdown to make it easier to render to a web page
-`
-
-const groq = new Groq({ 
-    apiKey: import.meta.env.VITE_GROQ_API_KEY,
-    dangerouslyAllowBrowser: true 
-})
-
-export async function getRecipeFromMistral(ingredientsArr) {
-    const ingredientsString = ingredientsArr.join(", ")
-    try {
-        const chat = await groq.chat.completions.create({
-            model: "llama-3.1-8b-instant",
-            messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: `I have ${ingredientsString}. Give me a recipe!` }
-            ],
-            max_tokens: 1024
-        })
-        return chat.choices[0].message.content
-    } catch (err) {
-        console.error("Failed to get recipe from Groq:", err)
-        throw err
-
+function getRecipeErrorMessage(err) {
+    const message = err?.message || '';
+    
+    if (message.includes('503') || message.includes('high demand')) {
+        return "Gemini 503 high demand – try again in 1min or use lighter model.";
     }
-    finally{
-        console.log('function executed ');
+    
+    if (!import.meta.env.VITE_GEMINI_API_KEY) {
+        return "Add VITE_GEMINI_API_KEY to .env";
     }
+    
+    if (message.includes('403')) {
+        return "403: Enable billing/API at console.cloud.google.com";
+    }
+    
+    if (message.includes('404')) {
+        return "404 model not found – check model name";
+    }
+    
+    return message;
 }
 
+export async function getRecipeFromMistral(ingredientsArr) {
+    const ingredientsString = ingredientsArr.join(", ");
+    const prompt = `You are Chefexa. Ingredients: ${ingredientsString}. Markdown recipe please.`;
+
+    try {
+        if (!import.meta.env.VITE_GEMINI_API_KEY) {
+            throw new Error(getRecipeErrorMessage());
+        }
+
+        const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        const result = await model.generateContent(prompt);
+        return await result.response.text();
+    } catch (error) {
+        console.error("Gemini error:", error);
+        throw new Error(getRecipeErrorMessage(error));
+    }
+}

@@ -22,7 +22,7 @@ export default function Main() {
                 setRecipeShown(true)
             } catch (error) {
                 console.error("Error generating recipe:", error)
-                setRecipe("Sorry, there was an error generating the recipe. Please check your API key and try again.")
+                setRecipe(`Sorry, there was an error generating the recipe.\n\n${error.message}`)
                 setRecipeShown(true)
             } finally {
                 setIsLoading(false)
@@ -55,7 +55,7 @@ export default function Main() {
             }
 
             {recipeShown && <ClaudeRecipe recipe={recipe} isLoading={isLoading} />}
+            {!recipeShown && isLoading && <p>Loading recipe...</p>}
         </main>
     )
 }
-
